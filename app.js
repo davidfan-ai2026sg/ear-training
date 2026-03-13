@@ -31,7 +31,7 @@ function solfegeLabel(semitone) {
 // SECTION 2 — LESSON DATA
 // lesson.type    : 'listen' | 'sing' | 'interval'
 // lesson.layout  : 'cards' (default) | 'scale'  → for long multi-step lessons
-// lesson.holdTime: ms to hold pitch (default 2000, use 1500 for scale steps)
+// lesson.holdTime: ms to fill hold bar (default 1200, use 1000 for scale steps)
 // lesson.playSpeed:'normal'(default) | 'scale'  → controls playback tempo
 // lesson.canPlayChord: true → show extra "Hear as chord" button
 // ══════════════════════════════════════════════════════════════════════════════
@@ -405,7 +405,7 @@ const LESSONS = [
   },
   {
     id: 'p6l2', phase: 6, type: 'interval', icon: '⬆️',
-    layout: 'scale', holdTime: 1500, playSpeed: 'scale',
+    layout: 'scale', holdTime: 1000, playSpeed: 'scale',
     targets: [0,2,4,5,7,9,11,0].map(s => ({ semitone: s })),
     adult: {
       title: 'Sing A Major Scale (up)',
@@ -424,7 +424,7 @@ const LESSONS = [
   },
   {
     id: 'p6l3', phase: 6, type: 'interval', icon: '⬇️',
-    layout: 'scale', holdTime: 1500, playSpeed: 'scale',
+    layout: 'scale', holdTime: 1000, playSpeed: 'scale',
     targets: [0,11,9,7,5,4,2,0].map(s => ({ semitone: s })),
     adult: {
       title: 'Sing A Major Scale (down)',
@@ -464,7 +464,7 @@ const LESSONS = [
   },
   {
     id: 'p7l2', phase: 7, type: 'interval', icon: '⬆️',
-    layout: 'scale', holdTime: 1500, playSpeed: 'scale',
+    layout: 'scale', holdTime: 1000, playSpeed: 'scale',
     targets: [0,2,3,5,7,8,10,0].map(s => ({ semitone: s })),
     adult: {
       title: 'Sing A Minor Scale (up)',
@@ -483,7 +483,7 @@ const LESSONS = [
   },
   {
     id: 'p7l3', phase: 7, type: 'interval', icon: '⬇️',
-    layout: 'scale', holdTime: 1500, playSpeed: 'scale',
+    layout: 'scale', holdTime: 1000, playSpeed: 'scale',
     targets: [0,10,8,7,5,3,2,0].map(s => ({ semitone: s })),
     adult: {
       title: 'Sing A Minor Scale (down)',
@@ -532,9 +532,11 @@ const state = {
     analyser: null,
     buf: null,
     rafId: null,
-    holdStart: null,
+    holdAccum: 0,       // ms accumulated in-tune (fills up, drains slowly)
+    lastFrameTime: null,// for delta-time calculation
     intervalStep: 0,
     stepDone: [],
+    stepStars: [],      // star earned per step; lesson star = min across steps
   },
   audioCtx: null,
 };
@@ -679,23 +681,37 @@ function micLoop() {
   const allTargets = lesson.targets.map(t => t.semitone);
   drawKeyboard(allTargets, target.semitone, detected?.noteClass ?? null, inTune);
 
-  // Hold timer — fill the hold bar
-  const now = Date.now();
-  const holdRequired = lesson.holdTime ?? 2000;
+  // Hold bar — fills while in tune, drains slowly when out of tune.
+  // Passes at 50% (1 star), 75% (2 stars), 100% (3 stars).
+  const holdRequired = lesson.holdTime ?? 1200;
+  const now2 = Date.now();
+  const dt   = state.mic.lastFrameTime ? Math.min(100, now2 - state.mic.lastFrameTime) : 16;
+  state.mic.lastFrameTime = now2;
+
   if (inTune) {
-    if (!state.mic.holdStart) state.mic.holdStart = now;
-    const held = now - state.mic.holdStart;
-    const pct  = Math.min(100, (held / holdRequired) * 100);
-    const hf   = document.getElementById('holdFill');
-    if (hf) hf.style.width = pct + '%';
-    if (held >= holdRequired) {
-      state.mic.holdStart = null;
-      stepPassed(step, lesson);
-    }
+    state.mic.holdAccum = Math.min(holdRequired, state.mic.holdAccum + dt);
   } else {
-    state.mic.holdStart = null;
-    const hf = document.getElementById('holdFill');
-    if (hf) hf.style.width = '0%';
+    // Drain at 30% of holdRequired per second — slow enough to survive brief wobbles
+    state.mic.holdAccum = Math.max(0, state.mic.holdAccum - dt * 0.3);
+  }
+
+  const pct = (state.mic.holdAccum / holdRequired) * 100;
+  const hf  = document.getElementById('holdFill');
+  if (hf) {
+    hf.style.width      = pct + '%';
+    hf.style.background = pct >= 100 ? '#69ff47'
+                        : pct >=  75 ? '#81c784'
+                        : pct >=  50 ? '#ffcc02'
+                        : 'var(--accent2)';
+  }
+
+  // Pass at 50% — star rating determined by how full the bar is
+  if (state.mic.holdAccum >= holdRequired * 0.5) {
+    const stars = state.mic.holdAccum >= holdRequired       ? 3
+                : state.mic.holdAccum >= holdRequired * 0.75 ? 2 : 1;
+    state.mic.holdAccum     = 0;
+    state.mic.lastFrameTime = null;
+    stepPassed(step, lesson, stars);
   }
 }
 
@@ -729,17 +745,22 @@ function updateDetectZone(detected, inTune, targetLetter) {
   }
 }
 
-function stepPassed(step, lesson) {
+function stepPassed(step, lesson, stepStar = 3) {
   state.mic.stepDone.push(step);
+  state.mic.stepStars.push(stepStar);
   if (step < lesson.targets.length - 1) {
     state.mic.intervalStep++;
+    state.mic.holdAccum     = 0;
+    state.mic.lastFrameTime = null;
     updateStepUI();
     const nextLetter = NOTE_INFO[lesson.targets[step + 1].semitone].letter;
     const fb = document.getElementById('feedbackEl');
     if (fb) { fb.textContent = `✓ Now sing ${nextLetter}!`; fb.className = 'feedback good'; }
   } else {
+    // Lesson star = worst step (every step must be good to earn 3 stars)
+    const lessonStars = Math.min(...state.mic.stepStars);
     stopMic();
-    showResult(lesson, 3);
+    showResult(lesson, lessonStars);
   }
 }
 
@@ -879,7 +900,7 @@ function openLesson(id) {
   state.lessonId = id;
   state.view = 'lesson';
   state.theoryOpen = false;
-  Object.assign(state.mic, { intervalStep: 0, stepDone: [], holdStart: null });
+  Object.assign(state.mic, { intervalStep: 0, stepDone: [], stepStars: [], holdAccum: 0, lastFrameTime: null });
   render();
 }
 

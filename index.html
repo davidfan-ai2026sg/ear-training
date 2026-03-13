@@ -241,8 +241,21 @@
     #keyboardCanvas { display: block; width: 100%; height: 120px; border-radius: var(--radius); margin-bottom: 18px; background: var(--surface); }
 
     /* Hold bar */
-    .hold-track { height: 6px; background: var(--surface2); border-radius: 3px; margin-bottom: 10px; overflow: hidden; }
-    .hold-fill  { height: 100%; background: var(--accent2); border-radius: 3px; width: 0%; transition: width 0.08s linear; }
+    .hold-track {
+      height: 8px; background: var(--surface2); border-radius: 4px;
+      margin-bottom: 10px; position: relative; overflow: hidden;
+    }
+    .hold-fill {
+      height: 100%; background: var(--accent2); border-radius: 4px;
+      width: 0%; transition: width 0.08s linear, background 0.2s;
+    }
+    /* Tick marks at 50% (★) and 75% (★★) so students can see the thresholds */
+    .hold-track::before, .hold-track::after {
+      content: ''; position: absolute; top: 0; width: 2px; height: 100%;
+      background: rgba(255,255,255,0.25); z-index: 1;
+    }
+    .hold-track::before { left: 50%; }
+    .hold-track::after  { left: 75%; }
 
     /* Feedback */
     .feedback {
