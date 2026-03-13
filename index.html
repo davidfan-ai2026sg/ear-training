@@ -201,10 +201,43 @@
     .btn-success:hover:not(:disabled)  { filter: brightness(1.08); }
     .btn-danger    { background: #c62828; color: #fff; }
 
-    /* Pitch meter */
-    .pitch-section { margin-bottom: 16px; }
-    .pitch-label { font-size: 0.75rem; color: var(--text-muted); text-align: center; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.07em; }
-    #pitchCanvas  { display: block; width: 100%; height: 90px; border-radius: var(--radius); background: var(--surface); }
+    /* Detect zone (replaces pitch metre) */
+    .detect-zone {
+      background: var(--surface);
+      border: 2px solid var(--border);
+      border-radius: var(--radius);
+      padding: 22px 16px 16px;
+      text-align: center;
+      margin-bottom: 12px;
+      min-height: 108px;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      transition: border-color 0.25s, background 0.25s;
+    }
+    .detect-zone.correct {
+      border-color: var(--accent2);
+      background: color-mix(in srgb, var(--accent2) 8%, var(--surface));
+    }
+    .detect-note {
+      font-size: 4.2rem; font-weight: 900; color: var(--text-muted);
+      line-height: 1; transition: color 0.2s, transform 0.15s;
+    }
+    .detect-note.correct { color: var(--accent2); transform: scale(1.06); }
+    .detect-label { font-size: 0.85rem; color: var(--text-muted); margin-top: 8px; }
+
+    /* Scale chips */
+    .scale-chips {
+      display: flex; gap: 5px; justify-content: center;
+      flex-wrap: wrap; margin-bottom: 14px;
+    }
+    .scale-chip {
+      background: var(--surface2); border: 1.5px solid var(--border);
+      border-radius: 8px; padding: 5px 11px;
+      font-size: 0.85rem; font-weight: 700; color: var(--text-muted);
+      transition: all 0.2s;
+    }
+    .scale-chip.cur  { border-color: var(--accent);  color: var(--accent); }
+    .scale-chip.done { border-color: var(--accent2); color: var(--accent2); }
+
     #keyboardCanvas { display: block; width: 100%; height: 120px; border-radius: var(--radius); margin-bottom: 18px; background: var(--surface); }
 
     /* Hold bar */
