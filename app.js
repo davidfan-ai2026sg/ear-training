@@ -31,7 +31,7 @@ function solfegeLabel(semitone) {
 // SECTION 2 — LESSON DATA
 // lesson.type    : 'listen' | 'sing' | 'interval'
 // lesson.layout  : 'cards' (default) | 'scale'  → for long multi-step lessons
-// lesson.holdTime: ms to fill hold bar (default 1500, use 1200 for scale steps)
+// lesson.holdTime: ms to fill hold bar (default 800, use 600 for scale steps)
 // lesson.playSpeed:'normal'(default) | 'scale'  → controls playback tempo
 // lesson.canPlayChord: true → show extra "Hear as chord" button
 // ══════════════════════════════════════════════════════════════════════════════
@@ -122,6 +122,26 @@ const LESSONS = [
     },
   },
 
+  {
+    id: 'p1l5', phase: 1, type: 'identify', icon: '🎯', rounds: 5,
+    pool: [0],
+    choices: [0, 2, 3, 5],
+    adult: {
+      title: 'Recognise A',
+      subtitle: 'Can you identify A by ear?',
+      desc: 'Press Play to hear a mystery note, then tap which note you think it is. You have 5 rounds. Your goal: recognise A among other notes.',
+    },
+    child: {
+      title: 'Find the Note!',
+      subtitle: 'Listen and tap the right button!',
+      desc: 'Press Play to hear a mystery note, then tap which note it is. You get 5 turns — just listen carefully and do your best!',
+    },
+    theory: {
+      interval: 'Note recognition',
+      extra: 'Recognising a note purely by ear is the first step towards perfect pitch. Repeated listening builds strong pitch memory over time.',
+    },
+  },
+
   // ─── PHASE 2 ───────────────────────────────────────────────────────────────
   {
     id: 'p2l1', phase: 2, type: 'listen', icon: '👂',
@@ -175,6 +195,26 @@ const LESSONS = [
     theory: {
       interval: 'Perfect Fifth (P5) — melodic',
       extra: '"Twinkle Twinkle Little Star" opens with a perfect fifth (La–Mi). So does the main theme of "Star Wars". It is arguably the most universally recognised leap in melody.',
+    },
+  },
+
+  {
+    id: 'p2l4', phase: 2, type: 'identify', icon: '🎯', rounds: 5,
+    pool: [0, 7],
+    choices: [0, 7, 2, 5],
+    adult: {
+      title: 'A or E?',
+      subtitle: 'Identify the note you hear',
+      desc: 'Each round plays either A or E — you decide which. They have different characters: A is the anchor, E is the bright fifth above. 5 rounds.',
+    },
+    child: {
+      title: 'A or E?',
+      subtitle: 'Which note did you hear?',
+      desc: 'Each turn plays A or E — can you tell which one? Remember: A is home, E is its best friend up high! 5 turns.',
+    },
+    theory: {
+      interval: 'Note recognition: Perfect Fifth',
+      extra: 'A and E are 7 semitones apart — a perfect fifth. Their different "colours" become easier to recognise with practice.',
     },
   },
 
@@ -249,6 +289,26 @@ const LESSONS = [
     theory: {
       interval: 'Major triad (root position): Root – Major Third – Perfect Fifth',
       extra: 'A major = A (La) + C♯ (Di) + E (Mi). The major third (A→C♯) gives the chord its bright quality; the perfect fifth (A→E) gives it stability. This is the most fundamental chord in Western music.',
+    },
+  },
+
+  {
+    id: 'p3l5', phase: 3, type: 'identify', icon: '🎯', rounds: 5,
+    pool: [0, 4, 7],
+    choices: [0, 4, 7, 2],
+    adult: {
+      title: 'A, C♯ or E?',
+      subtitle: 'Identify the note you hear',
+      desc: 'The three notes of the A major triad. Each round plays one at random — identify it. 5 rounds.',
+    },
+    child: {
+      title: 'A, C♯ or E?',
+      subtitle: 'Which of your three notes is it?',
+      desc: 'You know A, C♯ and E now! Each turn plays one of them — can you guess which? Listen for their different feelings. 5 turns.',
+    },
+    theory: {
+      interval: 'Note recognition: Major triad tones',
+      extra: 'A (La), C♯ (Di) and E (Mi) make up the A major triad. Each has a distinct character: A is stable, C♯ is bright, E is open.',
     },
   },
 
@@ -383,6 +443,26 @@ const LESSONS = [
     },
   },
 
+  {
+    id: 'p5l5', phase: 5, type: 'identify', icon: '🎯', rounds: 5,
+    pool: [0, 3, 7],
+    choices: [0, 3, 4, 7],
+    adult: {
+      title: 'A, C, C♯ or E?',
+      subtitle: 'The critical test: C vs C♯',
+      desc: 'C natural and C♯ are only one semitone apart — but they sound different. C natural is darker; C♯ is brighter. Each round plays A, C, or E. Can you tell them apart? 5 rounds.',
+    },
+    child: {
+      title: 'A, C, C♯ or E?',
+      subtitle: 'Can you hear the difference between C and C♯?',
+      desc: 'C and C♯ sound almost the same but not quite! C♯ is a little brighter. Listen carefully each turn and tap your answer. 5 turns.',
+    },
+    theory: {
+      interval: 'Note recognition: Minor vs major third',
+      extra: 'C natural (Do) vs C♯ (Di): one semitone apart, but C natural creates A minor while C♯ creates A major. This distinction is fundamental in music theory.',
+    },
+  },
+
   // ─── PHASE 6 ───────────────────────────────────────────────────────────────
   {
     id: 'p6l1', phase: 6, type: 'listen', icon: '👂',
@@ -405,7 +485,7 @@ const LESSONS = [
   },
   {
     id: 'p6l2', phase: 6, type: 'interval', icon: '⬆️',
-    layout: 'scale', holdTime: 1200, playSpeed: 'scale',
+    layout: 'scale', holdTime: 600, playSpeed: 'scale',
     targets: [0,2,4,5,7,9,11,0].map(s => ({ semitone: s })),
     adult: {
       title: 'Sing A Major Scale (up)',
@@ -424,7 +504,7 @@ const LESSONS = [
   },
   {
     id: 'p6l3', phase: 6, type: 'interval', icon: '⬇️',
-    layout: 'scale', holdTime: 1200, playSpeed: 'scale',
+    layout: 'scale', holdTime: 600, playSpeed: 'scale',
     targets: [0,11,9,7,5,4,2,0].map(s => ({ semitone: s })),
     adult: {
       title: 'Sing A Major Scale (down)',
@@ -464,7 +544,7 @@ const LESSONS = [
   },
   {
     id: 'p7l2', phase: 7, type: 'interval', icon: '⬆️',
-    layout: 'scale', holdTime: 1200, playSpeed: 'scale',
+    layout: 'scale', holdTime: 600, playSpeed: 'scale',
     targets: [0,2,3,5,7,8,10,0].map(s => ({ semitone: s })),
     adult: {
       title: 'Sing A Minor Scale (up)',
@@ -483,7 +563,7 @@ const LESSONS = [
   },
   {
     id: 'p7l3', phase: 7, type: 'interval', icon: '⬇️',
-    layout: 'scale', holdTime: 1200, playSpeed: 'scale',
+    layout: 'scale', holdTime: 600, playSpeed: 'scale',
     targets: [0,10,8,7,5,3,2,0].map(s => ({ semitone: s })),
     adult: {
       title: 'Sing A Minor Scale (down)',
@@ -540,6 +620,7 @@ const state = {
     intervalStep: 0,
     stepDone: [],
   },
+  identify: { round: 0, score: 0, target: null },
   audioCtx: null,
 };
 
@@ -725,7 +806,7 @@ function micLoop() {
 
   // Hold bar — fills while in tune, drains at 60%/s when out of tune.
   // Pass at 80% (2 stars), 100% (3 stars).
-  const holdRequired = lesson.holdTime ?? 1500;
+  const holdRequired = lesson.holdTime ?? 800;
   const now2 = Date.now();
   const dt   = state.mic.lastFrameTime ? Math.min(100, now2 - state.mic.lastFrameTime) : 16;
   state.mic.lastFrameTime = now2;
@@ -942,6 +1023,7 @@ function openLesson(id) {
   state.view = 'lesson';
   state.theoryOpen = false;
   Object.assign(state.mic, { intervalStep: 0, stepDone: [], stepStars: [], holdAccum: 0, lastFrameTime: null, wobbled: false });
+  Object.assign(state.identify, { round: 0, score: 0, target: null });
   render();
 }
 
@@ -971,7 +1053,7 @@ function render() {
   if (state.view === 'lesson') {
     requestAnimationFrame(() => {
       const l = currentLesson();
-      if (!l) return;
+      if (!l || l.type === 'identify') return;
       const step = state.mic.intervalStep;
       drawKeyboard(l.targets.map(t => t.semitone), l.targets[step].semitone, null, false);
     });
@@ -1018,6 +1100,7 @@ function renderLessonNode(lesson) {
 function renderLesson() {
   const lesson  = currentLesson();
   if (!lesson) return '';
+  if (lesson.type === 'identify') return renderIdentifyLesson(lesson);
   const content   = lessonContent(lesson);
   const phase     = PHASES.find(p => p.id === lesson.phase);
   const isScale   = lesson.layout === 'scale';
@@ -1115,8 +1198,81 @@ function renderLesson() {
   </div>`;
 }
 
+function renderIdentifyLesson(lesson) {
+  const content  = lessonContent(lesson);
+  const phase    = PHASES.find(p => p.id === lesson.phase);
+  const lessonNum = LESSONS.filter(l => l.phase === lesson.phase).findIndex(l => l.id === lesson.id) + 1;
+
+  const choices = lesson.choices.map(s => {
+    const info = NOTE_INFO[s];
+    const label = settings.noteDisplay === 'solfege' ? info.fixedDo
+                : settings.noteDisplay === 'letter'  ? info.letter
+                : `${info.letter}<br><small>${info.fixedDo}</small>`;
+    return `<button class="choice-btn" data-semitone="${s}" disabled>${label}</button>`;
+  }).join('');
+
+  return `<div class="lesson-view">
+    <div class="back-row">
+      <button class="back-btn" id="backBtn">← Back</button>
+      <span class="phase-crumb">${phase.label} · Lesson ${lessonNum}</span>
+    </div>
+    <div class="lesson-title">${content.title}</div>
+    <div class="lesson-subtitle">${content.subtitle}</div>
+    <div class="lesson-desc">${content.desc}</div>
+    <div class="identify-game">
+      <div class="identify-progress">Round <span id="idRound">1</span> / ${lesson.rounds} &nbsp;·&nbsp; Score: <span id="idScore">0</span></div>
+      <button class="btn btn-secondary" id="idPlayBtn">▶  Play mystery note</button>
+      <div id="idFeedback" class="feedback neutral">Press Play to hear the note.</div>
+      <div class="identify-choices">${choices}</div>
+    </div>
+    ${renderTheoryPanel(lesson)}
+  </div>`;
+}
+
+function startIdentifyRound(lesson) {
+  const pool = lesson.pool;
+  state.identify.target = pool[Math.floor(Math.random() * pool.length)];
+  const roundEl = document.getElementById('idRound');
+  const scoreEl = document.getElementById('idScore');
+  if (roundEl) roundEl.textContent = state.identify.round + 1;
+  if (scoreEl) scoreEl.textContent = state.identify.score;
+  const fb = document.getElementById('idFeedback');
+  if (fb) { fb.textContent = 'Press Play to hear the note.'; fb.className = 'feedback neutral'; }
+  document.querySelectorAll('.choice-btn').forEach(b => { b.disabled = true; b.className = 'choice-btn'; });
+}
+
+function handleIdentifyAnswer(semitone, lesson) {
+  const correct = semitone === state.identify.target;
+  if (correct) state.identify.score++;
+  // highlight correct and wrong
+  document.querySelectorAll('.choice-btn').forEach(b => {
+    const s = parseInt(b.dataset.semitone);
+    b.disabled = true;
+    if (s === state.identify.target) b.classList.add('correct');
+    else if (s === semitone) b.classList.add('wrong');
+  });
+  const fb = document.getElementById('idFeedback');
+  if (fb) {
+    fb.textContent = correct
+      ? (settings.mode === 'child' ? '✓ Yes! Great listening! 🌟' : '✓ Correct!')
+      : `✗ That was ${NOTE_INFO[state.identify.target].letter} (${NOTE_INFO[state.identify.target].fixedDo})`;
+    fb.className = 'feedback ' + (correct ? 'good' : 'bad');
+  }
+  setTimeout(() => {
+    state.identify.round++;
+    if (state.identify.round >= lesson.rounds) {
+      const stars = state.identify.score === lesson.rounds ? 3
+                  : state.identify.score >= lesson.rounds - 1 ? 2 : 1;
+      showResult(lesson, stars);
+    } else {
+      startIdentifyRound(lesson);
+    }
+  }, 1000);
+}
+
 function renderTheoryPanel(lesson) {
-  const rows = lesson.targets.map(t => {
+  const noteList = lesson.targets || lesson.pool.map(s => ({ semitone: s }));
+  const rows = noteList.map(t => {
     const info = NOTE_INFO[t.semitone];
     const enh  = info.enharmonic ? ` (also written: ${info.enharmonic})` : '';
     return `
@@ -1247,13 +1403,30 @@ function renderSettings() {
 // ── Event wiring ───────────────────────────────────────────────────────────────
 function attachHandlers() {
   document.getElementById('settingsBtn')?.addEventListener('click', renderSettings);
+  document.getElementById('backBtn')?.addEventListener('click', goToMap);
+
+  const _lesson = currentLesson();
+  if (_lesson?.type === 'identify') {
+    startIdentifyRound(_lesson);
+    document.getElementById('idPlayBtn')?.addEventListener('click', () => {
+      playSequence([state.identify.target], 'normal');
+      document.querySelectorAll('.choice-btn').forEach(b => { b.disabled = false; });
+    });
+    document.querySelectorAll('.choice-btn').forEach(btn => {
+      btn.addEventListener('click', () => handleIdentifyAnswer(parseInt(btn.dataset.semitone), _lesson));
+    });
+    document.getElementById('theoryToggle')?.addEventListener('click', () => {
+      state.theoryOpen = !state.theoryOpen;
+      document.getElementById('theoryPanel').className = 'theory-panel' + (state.theoryOpen ? ' open' : '');
+      document.getElementById('theoryToggle').textContent = `📖  Theory note ${state.theoryOpen ? '▲' : '▼'}`;
+    });
+    return;
+  }
 
   document.querySelectorAll('.lesson-node:not(.locked)').forEach(node => {
     node.addEventListener('click', () => openLesson(node.dataset.lesson));
     node.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') openLesson(node.dataset.lesson); });
   });
-
-  document.getElementById('backBtn')?.addEventListener('click', goToMap);
 
   document.getElementById('playBtn')?.addEventListener('click', () => {
     const lesson = currentLesson();

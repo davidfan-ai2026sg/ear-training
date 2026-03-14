@@ -255,6 +255,21 @@
       background: rgba(255,255,255,0.35); z-index: 1;
     }
 
+    /* Identify game */
+    .identify-game { margin: 16px 0; }
+    .identify-progress { text-align: center; font-size: 0.95rem; color: var(--text2); margin-bottom: 14px; font-weight: 600; }
+    .identify-choices { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 14px 0; }
+    .choice-btn {
+      padding: 20px 12px; font-size: 1.3rem; font-weight: 700;
+      border-radius: var(--radius); border: 2px solid var(--border);
+      background: var(--surface); color: var(--text);
+      cursor: pointer; transition: all 0.15s; line-height: 1.4;
+    }
+    .choice-btn:not(:disabled):hover { border-color: var(--accent); }
+    .choice-btn:disabled { opacity: 0.45; cursor: default; }
+    .choice-btn.correct { background: #4caf50; color: #fff; border-color: #4caf50; opacity: 1; }
+    .choice-btn.wrong   { background: #e53935; color: #fff; border-color: #e53935; opacity: 1; }
+
     /* Feedback */
     .feedback {
       text-align: center; font-size: 0.95rem; font-weight: 600;
