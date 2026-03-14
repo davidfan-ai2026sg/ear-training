@@ -249,13 +249,11 @@
       height: 100%; background: var(--accent2); border-radius: 4px;
       width: 0%; transition: width 0.08s linear, background 0.2s;
     }
-    /* Tick marks at 50% (★) and 75% (★★) so students can see the thresholds */
-    .hold-track::before, .hold-track::after {
-      content: ''; position: absolute; top: 0; width: 2px; height: 100%;
-      background: rgba(255,255,255,0.25); z-index: 1;
+    /* Tick mark at 80% — pass threshold (2★) */
+    .hold-track::before {
+      content: ''; position: absolute; top: 0; left: 80%; width: 2px; height: 100%;
+      background: rgba(255,255,255,0.35); z-index: 1;
     }
-    .hold-track::before { left: 50%; }
-    .hold-track::after  { left: 75%; }
 
     /* Feedback */
     .feedback {
@@ -346,6 +344,7 @@
 </head>
 <body>
   <div id="app"></div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

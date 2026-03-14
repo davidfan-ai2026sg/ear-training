@@ -31,7 +31,7 @@ function solfegeLabel(semitone) {
 // SECTION 2 — LESSON DATA
 // lesson.type    : 'listen' | 'sing' | 'interval'
 // lesson.layout  : 'cards' (default) | 'scale'  → for long multi-step lessons
-// lesson.holdTime: ms to fill hold bar (default 1200, use 1000 for scale steps)
+// lesson.holdTime: ms to fill hold bar (default 1500, use 1200 for scale steps)
 // lesson.playSpeed:'normal'(default) | 'scale'  → controls playback tempo
 // lesson.canPlayChord: true → show extra "Hear as chord" button
 // ══════════════════════════════════════════════════════════════════════════════
@@ -87,7 +87,7 @@ const LESSONS = [
   },
   {
     id: 'p1l3', phase: 1, type: 'sing', icon: '⬆️',
-    targets: [{ semitone: 0 }],
+    targets: [{ semitone: 0, playSemitone: 12 }],
     adult: {
       title: 'Octave Up',
       subtitle: 'A at a higher pitch — double the frequency',
@@ -105,7 +105,7 @@ const LESSONS = [
   },
   {
     id: 'p1l4', phase: 1, type: 'sing', icon: '⬇️',
-    targets: [{ semitone: 0 }],
+    targets: [{ semitone: 0, playSemitone: -12 }],
     adult: {
       title: 'Octave Down',
       subtitle: 'A at a lower pitch — half the frequency',
@@ -405,7 +405,7 @@ const LESSONS = [
   },
   {
     id: 'p6l2', phase: 6, type: 'interval', icon: '⬆️',
-    layout: 'scale', holdTime: 1000, playSpeed: 'scale',
+    layout: 'scale', holdTime: 1200, playSpeed: 'scale',
     targets: [0,2,4,5,7,9,11,0].map(s => ({ semitone: s })),
     adult: {
       title: 'Sing A Major Scale (up)',
@@ -424,7 +424,7 @@ const LESSONS = [
   },
   {
     id: 'p6l3', phase: 6, type: 'interval', icon: '⬇️',
-    layout: 'scale', holdTime: 1000, playSpeed: 'scale',
+    layout: 'scale', holdTime: 1200, playSpeed: 'scale',
     targets: [0,11,9,7,5,4,2,0].map(s => ({ semitone: s })),
     adult: {
       title: 'Sing A Major Scale (down)',
@@ -464,7 +464,7 @@ const LESSONS = [
   },
   {
     id: 'p7l2', phase: 7, type: 'interval', icon: '⬆️',
-    layout: 'scale', holdTime: 1000, playSpeed: 'scale',
+    layout: 'scale', holdTime: 1200, playSpeed: 'scale',
     targets: [0,2,3,5,7,8,10,0].map(s => ({ semitone: s })),
     adult: {
       title: 'Sing A Minor Scale (up)',
@@ -483,7 +483,7 @@ const LESSONS = [
   },
   {
     id: 'p7l3', phase: 7, type: 'interval', icon: '⬇️',
-    layout: 'scale', holdTime: 1000, playSpeed: 'scale',
+    layout: 'scale', holdTime: 1200, playSpeed: 'scale',
     targets: [0,10,8,7,5,3,2,0].map(s => ({ semitone: s })),
     adult: {
       title: 'Sing A Minor Scale (down)',
@@ -515,6 +515,7 @@ const settings = loadJSON('pp_settings', {
   mode: 'adult',
   listenOnly: false,
   noteDisplay: 'both',
+  soundType: 'beep',
 });
 
 let progress = loadJSON('pp_progress', {});
@@ -532,11 +533,12 @@ const state = {
     analyser: null,
     buf: null,
     rafId: null,
-    holdAccum: 0,       // ms accumulated in-tune (fills up, drains slowly)
-    lastFrameTime: null,// for delta-time calculation
+    holdAccum: 0,
+    lastFrameTime: null,
+    wobbled: false,
+    stepStars: [],
     intervalStep: 0,
     stepDone: [],
-    stepStars: [],      // star earned per step; lesson star = min across steps
   },
   audioCtx: null,
 };
@@ -545,40 +547,80 @@ const state = {
 // SECTION 4 — AUDIO ENGINE
 // ══════════════════════════════════════════════════════════════════════════════
 
-function getAudioCtx() {
+// ── Shared Web Audio context (beep playback + mic detection) ─────────────────
+function getCtx() {
   if (!state.audioCtx) state.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
   if (state.audioCtx.state === 'suspended') state.audioCtx.resume();
   return state.audioCtx;
 }
+// alias used by mic detection
+const getMicCtx = getCtx;
 
-function playNote(semitone, duration = 1.2) {
-  const ctx  = getAudioCtx();
+function scheduleBeep(ctx, semitone, startTime, duration) {
   const freq = semitoneToFreq(semitone);
   const osc  = ctx.createOscillator();
   const gain = ctx.createGain();
   osc.connect(gain); gain.connect(ctx.destination);
   osc.type = 'sine';
-  osc.frequency.setValueAtTime(freq, ctx.currentTime);
-  gain.gain.setValueAtTime(0.001, ctx.currentTime);
-  gain.gain.linearRampToValueAtTime(0.35, ctx.currentTime + 0.05);
-  gain.gain.setValueAtTime(0.35, ctx.currentTime + duration - 0.12);
-  gain.gain.linearRampToValueAtTime(0.001, ctx.currentTime + duration);
-  osc.start(ctx.currentTime);
-  osc.stop(ctx.currentTime + duration + 0.05);
+  osc.frequency.setValueAtTime(freq, startTime);
+  gain.gain.setValueAtTime(0.001, startTime);
+  gain.gain.linearRampToValueAtTime(0.35, startTime + 0.05);
+  gain.gain.setValueAtTime(0.35, startTime + duration - 0.12);
+  gain.gain.linearRampToValueAtTime(0.001, startTime + duration);
+  osc.start(startTime);
+  osc.stop(startTime + duration + 0.05);
 }
 
-// Play N notes sequentially. speed: 'normal' (intervals) | 'scale'
-function playSequence(semitones, speed = 'normal') {
-  getAudioCtx();
+// ── Piano sampler (Tone.js + Salamander Grand Piano) ─────────────────────────
+// MIDI 81 = A5 (880 Hz) — bright, singable octave
+let _sampler = null;
+async function getSampler() {
+  if (_sampler) return _sampler;
+  _sampler = new Tone.Sampler({
+    urls: {
+      A0:'A0.mp3', C1:'C1.mp3', 'D#1':'Ds1.mp3', 'F#1':'Fs1.mp3',
+      A1:'A1.mp3', C2:'C2.mp3', 'D#2':'Ds2.mp3', 'F#2':'Fs2.mp3',
+      A2:'A2.mp3', C3:'C3.mp3', 'D#3':'Ds3.mp3', 'F#3':'Fs3.mp3',
+      A3:'A3.mp3', C4:'C4.mp3', 'D#4':'Ds4.mp3', 'F#4':'Fs4.mp3',
+      A4:'A4.mp3', C5:'C5.mp3', 'D#5':'Ds5.mp3', 'F#5':'Fs5.mp3',
+      A5:'A5.mp3', C6:'C6.mp3', 'D#6':'Ds6.mp3', 'F#6':'Fs6.mp3',
+      A6:'A6.mp3', C7:'C7.mp3', 'D#7':'Ds7.mp3', 'F#7':'Fs7.mp3', A7:'A7.mp3',
+    },
+    baseUrl: 'https://tonejs.github.io/audio/salamander/',
+  }).toDestination();
+  await Tone.loaded();
+  return _sampler;
+}
+
+async function playSequence(semitones, speed = 'normal') {
   const dur = speed === 'scale' ? 0.55 : 1.2;
-  const gap = speed === 'scale' ? 650  : 1300;
-  semitones.forEach((s, i) => setTimeout(() => playNote(s, dur), i * gap));
+  const gap = speed === 'scale' ? 0.65 : 1.3;
+  if (settings.soundType === 'piano') {
+    await Tone.start();
+    const s = await getSampler();
+    const now = Tone.now();
+    // multiply by 2 to play one octave above the beep (A5 = 880 Hz instead of A4 = 440 Hz)
+    semitones.forEach((semitone, i) => s.triggerAttackRelease(semitoneToFreq(semitone) * 2, dur, now + i * gap));
+  } else {
+    const ctx = getCtx();
+    if (ctx.state === 'suspended') await ctx.resume();
+    const now = ctx.currentTime + 0.05;
+    semitones.forEach((semitone, i) => scheduleBeep(ctx, semitone, now + i * gap, dur));
+  }
 }
 
-// Play all notes simultaneously as a chord
-function playChord(semitones) {
-  getAudioCtx();
-  semitones.forEach(s => playNote(s, 2.2));
+async function playChord(semitones) {
+  if (settings.soundType === 'piano') {
+    await Tone.start();
+    const s = await getSampler();
+    const now = Tone.now();
+    semitones.forEach(semitone => s.triggerAttackRelease(semitoneToFreq(semitone) * 2, 2.2, now));
+  } else {
+    const ctx = getCtx();
+    if (ctx.state === 'suspended') await ctx.resume();
+    const now = ctx.currentTime + 0.05;
+    semitones.forEach(semitone => scheduleBeep(ctx, semitone, now, 2.2));
+  }
 }
 
 // ── Pitch detection ───────────────────────────────────────────────────────────
@@ -632,7 +674,7 @@ async function startMic() {
   if (state.mic.active) return;
   try {
     const stream   = await navigator.mediaDevices.getUserMedia({ audio: true });
-    const ctx      = getAudioCtx();
+    const ctx      = getMicCtx();
     const analyser = ctx.createAnalyser();
     analyser.fftSize = 2048;
     ctx.createMediaStreamSource(stream).connect(analyser);
@@ -653,7 +695,7 @@ function stopMic() {
   if (!state.mic.active) return;
   cancelAnimationFrame(state.mic.rafId);
   state.mic.stream?.getTracks().forEach(t => t.stop());
-  Object.assign(state.mic, { active: false, stream: null, analyser: null, holdStart: null });
+  Object.assign(state.mic, { active: false, stream: null, analyser: null, holdAccum: 0, lastFrameTime: null, wobbled: false, intervalStep: 0, stepDone: [], stepStars: [] });
 }
 
 function micLoop() {
@@ -664,7 +706,7 @@ function micLoop() {
   if (!lesson) return;
 
   state.mic.analyser.getFloatTimeDomainData(state.mic.buf);
-  const freq     = autoCorrelate(state.mic.buf, getAudioCtx().sampleRate);
+  const freq     = autoCorrelate(state.mic.buf, getMicCtx().sampleRate);
   const detected = freq > 0 ? detectNote(freq) : null;
   const step     = state.mic.intervalStep;
   const target   = lesson.targets[step];
@@ -681,9 +723,9 @@ function micLoop() {
   const allTargets = lesson.targets.map(t => t.semitone);
   drawKeyboard(allTargets, target.semitone, detected?.noteClass ?? null, inTune);
 
-  // Hold bar — fills while in tune, drains slowly when out of tune.
-  // Passes at 50% (1 star), 75% (2 stars), 100% (3 stars).
-  const holdRequired = lesson.holdTime ?? 1200;
+  // Hold bar — fills while in tune, drains at 60%/s when out of tune.
+  // Pass at 80% (2 stars), 100% (3 stars).
+  const holdRequired = lesson.holdTime ?? 1500;
   const now2 = Date.now();
   const dt   = state.mic.lastFrameTime ? Math.min(100, now2 - state.mic.lastFrameTime) : 16;
   state.mic.lastFrameTime = now2;
@@ -691,8 +733,8 @@ function micLoop() {
   if (inTune) {
     state.mic.holdAccum = Math.min(holdRequired, state.mic.holdAccum + dt);
   } else {
-    // Drain at 30% of holdRequired per second — slow enough to survive brief wobbles
-    state.mic.holdAccum = Math.max(0, state.mic.holdAccum - dt * 0.3);
+    if (state.mic.holdAccum > 0) state.mic.wobbled = true; // drifted at least once
+    state.mic.holdAccum = Math.max(0, state.mic.holdAccum - dt * 0.6);
   }
 
   const pct = (state.mic.holdAccum / holdRequired) * 100;
@@ -700,17 +742,16 @@ function micLoop() {
   if (hf) {
     hf.style.width      = pct + '%';
     hf.style.background = pct >= 100 ? '#69ff47'
-                        : pct >=  75 ? '#81c784'
-                        : pct >=  50 ? '#ffcc02'
+                        : pct >=  80 ? '#81c784'
                         : 'var(--accent2)';
   }
 
-  // Pass at 50% — star rating determined by how full the bar is
-  if (state.mic.holdAccum >= holdRequired * 0.5) {
-    const stars = state.mic.holdAccum >= holdRequired       ? 3
-                : state.mic.holdAccum >= holdRequired * 0.75 ? 2 : 1;
+  // Pass only at 100% — stars depend on whether they wobbled during the hold
+  if (state.mic.holdAccum >= holdRequired) {
+    const stars = state.mic.wobbled ? 2 : 3;
     state.mic.holdAccum     = 0;
     state.mic.lastFrameTime = null;
+    state.mic.wobbled       = false;
     stepPassed(step, lesson, stars);
   }
 }
@@ -752,12 +793,12 @@ function stepPassed(step, lesson, stepStar = 3) {
     state.mic.intervalStep++;
     state.mic.holdAccum     = 0;
     state.mic.lastFrameTime = null;
+    state.mic.wobbled       = false;
     updateStepUI();
     const nextLetter = NOTE_INFO[lesson.targets[step + 1].semitone].letter;
     const fb = document.getElementById('feedbackEl');
     if (fb) { fb.textContent = `✓ Now sing ${nextLetter}!`; fb.className = 'feedback good'; }
   } else {
-    // Lesson star = worst step (every step must be good to earn 3 stars)
     const lessonStars = Math.min(...state.mic.stepStars);
     stopMic();
     showResult(lesson, lessonStars);
@@ -900,7 +941,7 @@ function openLesson(id) {
   state.lessonId = id;
   state.view = 'lesson';
   state.theoryOpen = false;
-  Object.assign(state.mic, { intervalStep: 0, stepDone: [], stepStars: [], holdAccum: 0, lastFrameTime: null });
+  Object.assign(state.mic, { intervalStep: 0, stepDone: [], stepStars: [], holdAccum: 0, lastFrameTime: null, wobbled: false });
   render();
 }
 
@@ -1160,6 +1201,13 @@ function renderSettings() {
       </div>
     </div>
     <div class="setting-row">
+      <div class="setting-label">Reference sound</div>
+      <div class="toggle-group">
+        <button class="tog ${settings.soundType === 'beep'  ? 'active' : ''}" data-sound="beep">🔔 Beep</button>
+        <button class="tog ${settings.soundType === 'piano' ? 'active' : ''}" data-sound="piano">🎹 Piano</button>
+      </div>
+    </div>
+    <div class="setting-row">
       <div class="setting-label">Note display</div>
       <div class="toggle-group">
         <button class="tog ${settings.noteDisplay === 'letter'  ? 'active' : ''}" data-notes="letter">Letter</button>
@@ -1182,6 +1230,9 @@ function renderSettings() {
   });
   sheet.querySelectorAll('[data-listen]').forEach(b => b.onclick = () => {
     settings.listenOnly = b.dataset.listen === 'true'; saveSettings(); sheet.remove(); render();
+  });
+  sheet.querySelectorAll('[data-sound]').forEach(b => b.onclick = () => {
+    settings.soundType = b.dataset.sound; saveSettings(); sheet.remove(); render();
   });
   sheet.querySelectorAll('[data-notes]').forEach(b => b.onclick = () => {
     settings.noteDisplay = b.dataset.notes; saveSettings(); sheet.remove(); render();
@@ -1207,13 +1258,12 @@ function attachHandlers() {
   document.getElementById('playBtn')?.addEventListener('click', () => {
     const lesson = currentLesson();
     if (!lesson) return;
-    getAudioCtx();
-    playSequence(lesson.targets.map(t => t.semitone), lesson.playSpeed || 'normal');
+    playSequence(lesson.targets.map(t => t.playSemitone ?? t.semitone), lesson.playSpeed || 'normal');
   });
 
   document.getElementById('chordBtn')?.addEventListener('click', () => {
     const lesson = currentLesson();
-    if (lesson) playChord(lesson.targets.map(t => t.semitone));
+    if (lesson) playChord(lesson.targets.map(t => t.playSemitone ?? t.semitone));
   });
 
   document.getElementById('singBtn')?.addEventListener('click', async () => {
